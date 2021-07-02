@@ -1,0 +1,106 @@
+import com.sun.xml.internal.ws.runtime.config.TubelineFeatureReader
+
+plugins {
+    id 'org.springframework.boot' version '2.4.5'
+    id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+    id "com.ewerk.gradle.plugins.querydsl" version "1.0.10" // querydsl 추가
+    id 'java'
+}
+
+group = 'io.common.hoony'
+version = '1.0.0'
+//version = '3.0.0-SNAPSHOT'
+sourceCompatibility = '1.8'
+
+//querydal 추가
+def generated='src/main/generated'
+//querydal 추가
+//querydsl {
+//    jpa = true
+//    querydslSourcesDir = querydslDir
+//}
+//querydal 추가
+sourceSets {
+    main.java.srcDirs += [ generated ]
+}
+tasks.withType(JavaCompile) {
+    options.annotationProcessorGeneratedSourcesDirectory = file(generated)
+}
+clean.doLast {
+    file(generated).deleteDir()
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+
+    all {
+        // log4j2를 사용하기 위해, spring의 default인 logback을 제외
+        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
+        resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+    }
+
+    //querydsl.extendsFrom compileClasspath //querydal 추가
+}
+
+////querydal 추가
+//compileQuerydsl {
+//    options.annotationProcessorPath = configurations.querydsl
+//}
+
+
+
+repositories {
+    mavenCentral()
+    maven {
+        credentials {
+            username project.properties["nexus.dkargo.username"]
+            password project.properties["nexus.dkargo.password"]
+        }
+        url project.properties["nexus.dkargo.url.release"]
+    }
+}
+
+//bootJar.enabled = true
+//jar.enabled = true
+bootJar {
+    launchScript()
+}
+
+
+apply plugin: 'maven'
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            repository(url: project.properties["nexus.dkargo.url.release"]) {
+                authentication(userName: project.properties["nexus.dkargo.username"], password: project.properties["nexus.dkargo.password"])
+            }
+            snapshotRepository(url: project.properties["nexus.dkargo.url.snapshot"]) {
+                authentication(userName: project.properties["nexus.dkargo.username"], password: project.properties["nexus.dkargo.password"])
+            }
+        }
+    }
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter'
+    implementation group: 'io.springfox', name: 'springfox-swagger2', version: "2.9.2"
+    implementation group: 'io.springfox', name: 'springfox-swagger-ui', version: "2.9.2"
+    implementation group:'log.munzi', name:'munzi-log', version:'0.0.6'
+    implementation("org.mariadb.jdbc:mariadb-java-client:2.1.2")
+    //implementation 'com.querydsl:querydsl-jpa' //querydsl 추가
+    compile("com.querydsl:querydsl-core")
+    compile("com.querydsl:querydsl-jpa")
+    compileOnly 'org.projectlombok:lombok'
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+    annotationProcessor 'org.projectlombok:lombok'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+test {
+    useJUnitPlatform()
+}
